@@ -1,0 +1,2 @@
+[global.databases]
+paperside_api_db = { url = "postgres://paperside_api_development:paperside_api_development@localhost/paperside_api_development" }
