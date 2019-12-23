@@ -3,7 +3,6 @@ CREATE TABLE authors (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL
 );
--- Your SQL goes here
 CREATE TABLE reference_items (
   id SERIAL PRIMARY KEY,
   title TEXT NOT NULL,

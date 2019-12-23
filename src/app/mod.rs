@@ -3,11 +3,17 @@ use rocket_contrib::{database};
 use rocket_contrib::databases::diesel as pgd;
 
 // local modules
+pub mod config;
+pub use config::*;
+
 pub mod models;
 pub use models::*;
 
 pub mod controllers;
 pub use controllers::*;
+
+pub mod fairings;
+pub use fairings::*;
 
 // db wrapper type
 #[database("paperside_api_db")]
@@ -15,8 +21,11 @@ pub struct PapersideApiDbConn(pgd::PgConnection);
 
 // index route
 #[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
+fn index(su: SessionUser) -> String {
+    match su.user {
+        Some(user) => format!("Hello, {}!", user.name),
+        None => "Hello, world!".into(),
+    }
 }
 
 
@@ -25,9 +34,13 @@ pub fn rocket() -> Rocket {
     rocket::ignite()
         .attach(PapersideApiDbConn::fairing())
         .mount("/", routes![index])
+        .mount("/", routes![
+            sessions_login, sessions_logout,
+            registrations_register])
         .mount("/reference_items", routes![
             list_reference_items,create_reference_item,read_reference_item,
             update_reference_item,delete_reference_item])
+        .attach(AppConfig::manage())
 }
 
 
