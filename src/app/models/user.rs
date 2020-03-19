@@ -1,43 +1,47 @@
 use chrono::{DateTime,Utc};
-use serde::{Deserialize,Serialize};
-use diesel::prelude::*;
-use diesel::expression::{Expression};
-use diesel::pg::Pg;
-use diesel::query_dsl::{QueryDsl};
+use serde::{Deserialize, Serialize};
 
-use crate::schema::{users};
+use crate::schema::*;
 
-type AllUserColumns = (
-    users::id,
-    users::name,
-    users::doublehashed,
-    users::created_at,
-);
-type BoxedUserQuery<'a> = users::BoxedQuery<'a, Pg, <AllUserColumns as Expression>::SqlType>;
-
-
-// user model
-#[derive(Clone, Deserialize, Serialize, Identifiable, Queryable, AsChangeset)]
-#[table_name="users"]
+/// User record with all fields
+#[derive(Debug, Serialize, Deserialize, Queryable)]
 pub struct User {
     pub id: i32,
     pub name: String,
-    pub doublehashed: String,
+    pub passhash: String,
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Deserialize, Serialize, Insertable)]
-#[table_name="users"]
+/// SlimUser user record with only session-pertinent fields
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SlimUser {
+    pub id: i32,
+    pub name: String,
+}
+
+impl From<User> for SlimUser {
+    /// picks pertinent fields from User record
+    fn from(user: User) -> Self {
+        SlimUser { id: user.id, name: user.name }
+    }
+}
+
+/// NewUser struct for fields necessary when inserting a new user record
+#[derive(Debug, Clone, Serialize, Deserialize, Insertable)]
+#[table_name = "users"]
 pub struct NewUser {
     pub name: String,
-    pub doublehashed: String,
+    pub passhash: String,
     pub created_at: DateTime<Utc>,
 }
 
-
-impl User {
-    /// Prepares user query by equal username
-    pub fn by_name<'a>(name: &'a str) -> BoxedUserQuery<'a> {
-        users::table.into_boxed().filter(users::name.eq(name))
+impl NewUser {
+    /// constructor method for NewUser records from registration data
+    pub fn from_details<S: Into<String>, T: Into<String>>(name: S, passhash: T) -> Self {
+        NewUser {
+            name: name.into(),
+            passhash: passhash.into(),
+            created_at: Utc::now(),
+        }
     }
 }

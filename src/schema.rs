@@ -22,10 +22,9 @@ table! {
 }
 
 table! {
-    sessions (id) {
-        id -> Int4,
+    sessions (token) {
+        token -> Varchar,
         user_id -> Int4,
-        hashed_access_token -> Text,
         created_at -> Timestamptz,
         last_accessed_at -> Timestamptz,
         accessed_by_client_ip -> Nullable<Text>,
@@ -36,7 +35,7 @@ table! {
     users (id) {
         id -> Int4,
         name -> Text,
-        doublehashed -> Text,
+        passhash -> Varchar,
         created_at -> Timestamptz,
     }
 }

@@ -1,91 +1,60 @@
-use bcrypt;
-use chrono::{Utc};
+use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::prelude::*;
-use rocket::{post};
-use rocket::response::status::{BadRequest};
-use rocket_contrib::json::Json;
-use serde::{Deserialize,Serialize};
+use serde::Deserialize;
 
-use crate::app::{PapersideApiDbConn};
-use crate::app::models::*;
+use crate::app::config::DbPool;
+use crate::app::errors::ServiceError;
+use crate::app::models::{NewUser, SlimUser, User};
+use crate::app::security::hash_password;
 
-use crate::schema;
-
-const BCRYPT_COST: u32 = 11;
-
-/// Params for new user registration
-#[derive(Deserialize, Serialize)]
-pub struct NewRegistrationRequest {
-    pub user_name: String,
-    pub one_hashed: String, // pre-hashed password from client
+// RegistrationData represents a json request to register a new account
+#[derive(Debug, Deserialize)]
+pub struct RegistrationData {
+    pub username: String,
+    pub password: String,
 }
 
-// login (creates new session)
-#[post("/register", format = "application/json", data = "<attr>")]
-pub fn registrations_register(conn: PapersideApiDbConn, attr: Json<NewRegistrationRequest>) -> Result<Json<String>,BadRequest<String>> {
-    // check if username is taken
-    let existing_user_count: i64 = User::by_name(&attr.user_name)
-        .count()
-        .get_result(&conn.0).expect("Error fetching existing User count");
-    if existing_user_count > 0 {
-        // registration failed
-        return Err(BadRequest(Some("Username taken".into())))
+/// POST /register 
+pub async fn register_user(
+    user_data: web::Json<RegistrationData>,
+    pool: web::Data<DbPool>,
+) -> Result<HttpResponse, ServiceError> {
+    let user_data = user_data.into_inner();
+    let res = web::block(move || {
+        query_create_user(
+            user_data.username,
+            user_data.password,
+            pool,
+        )
+    })
+    .await;
+
+    match res {
+        Ok(user) => Ok(HttpResponse::Ok().json(&user)),
+        Err(err) => match err {
+            BlockingError::Error(service_error) => Err(service_error),
+            BlockingError::Canceled => Err(ServiceError::InternalServerError),
+        },
     }
-
-    // creates new user record
-    let new_user = NewUser {
-        name: (&attr.user_name).into(),
-        doublehashed: bcrypt::hash(&attr.one_hashed, BCRYPT_COST).expect("bcrypt error"),
-        created_at: Utc::now(),
-    };
-    let _created_user: User = diesel::insert_into(schema::users::table)
-        .values(&new_user)
-        .get_result(&conn.0)
-        .map_err(|err| BadRequest(Some(err.to_string())))?;
-
-    // returns success
-    Ok(Json("Registration success".into()))
 }
 
-#[cfg(test)]
-mod test {
-    use rocket::http::{ContentType,Status};
-    use crate::{json_string};
-    use crate::app::test::{test_client};
-    use crate::app::controllers::sessions_controller::test::{help_login,help_logout};
 
-    #[test]
-    fn test_register() {
-        // test params
-        let user_name = format!("Test User {:?}", chrono::Utc::now());
-        let hashed_password = "abcdef0123456789";
+/// Inserts new user row into the database
+fn query_create_user(
+    username: String,
+    password: String,
+    pool: web::Data<DbPool>,
+) -> Result<SlimUser, ServiceError> {
+    use crate::schema::users::dsl::users;
+    let conn: &PgConnection = &pool.get().unwrap();
 
-        // post to register endpoint
-        let response = test_client().post("/register")
-            .body(json_string!({
-                "user_name": user_name,
-                "one_hashed": hashed_password,
-            }))
-            .header(ContentType::JSON).dispatch();
-        assert_eq!(response.status(), Status::Ok);
+    // try hashing the password, else return the error that will be converted to ServiceError
+    let password: String = hash_password(&password)?;
+    dbg!(&password);
 
-        // test login to new account
-        let r_2 = help_login(&user_name, hashed_password);
-        assert_eq!(r_2.status(), Status::Ok);
-
-        // ensure logout
-        let r_3 = help_logout();
-        assert_eq!(r_3.status(), Status::Ok);
-
-
-        // attempt duplicate registration (result is BadRequest)
-        let mut r_4 = test_client().post("/register")
-            .body(json_string!({
-                "user_name": user_name,
-                "one_hashed": hashed_password,
-            }))
-            .header(ContentType::JSON).dispatch();
-        assert_eq!(r_4.status(), Status::BadRequest);
-        assert_eq!(r_4.body_string(), Some("Username taken".into()));
-    }
+    let user = NewUser::from_details(username, password);
+    let inserted_user: User =
+        diesel::insert_into(users).values(&user).get_result(conn)?;
+    dbg!(&inserted_user);
+    return Ok(inserted_user.into());
 }
