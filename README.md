@@ -1,9 +1,50 @@
 paperside-api
 ===
 
-Rust / [Rocket](https://rocket.rs/) based API server for Project Paperside.
+Rust / [Actix-Web](https://github.com/actix/actix-web) based API server for Project Paperside.
 
-Uses [Diesel](https://github.com/diesel-rs/diesel) and Postgres for database, mixed [JWT](https://github.com/Keats/jsonwebtoken) and db session implementation
+Uses [Diesel](https://github.com/diesel-rs/diesel) and Postgresql for database
+
+
+##### Install
+
+- Create development database server. Update the config in .env to match the database configuration
+
+```
+CREATE DATABASE paperside_api_development;
+CREATE USER paperside_api_development WITH ENCRYPTED PASSWORD 'paperside_api_development';
+GRANT ALL ON DATABASE paperside_api_development TO paperside_api_development;
+```
+
+- Initialize / migrate diesel models
+
+```
+diesel migration run
+```
+
+
+##### Test Setup
+
+- Create test database server. Update the config in .env.test to match the testing database configuration
+
+```
+CREATE DATABASE paperside_api_test;
+CREATE USER paperside_api_test WITH ENCRYPTED PASSWORD 'paperside_api_test';
+GRANT ALL ON DATABASE paperside_api_test TO paperside_api_test;
+```
+
+- Initialize / migrate diesel models (must specify the testing database url)
+
+```
+diesel migration run --database-url postgres://paperside_api_test:paperside_api_test@localhost/paperside_api_test
+```
+
+##### Run Tests
+
+```
+cargo test
+```
+
 
 MIT License
 ---
