@@ -8,8 +8,8 @@ use diesel::prelude::*;
 use diesel::PgConnection;
 use futures::future::Future;
 
+use crate::app::database::DbPool;
 use crate::app::errors::ServiceError;
-use crate::app::config::DbPool;
 use crate::app::models::{Session, SlimUser, User};
 
 // extend SlimUser type for use as middleware

@@ -2,7 +2,7 @@ use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::prelude::*;
 use serde::Deserialize;
 
-use crate::app::config::DbPool;
+use crate::app::database::DbPool;
 use crate::app::errors::ServiceError;
 use crate::app::models::{NewUser, SlimUser, User};
 use crate::app::security::hash_password;

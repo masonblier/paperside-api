@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use diesel::PgConnection;
 use serde::Deserialize;
 
-use crate::app::config::DbPool;
+use crate::app::database::DbPool;
 use crate::app::errors::ServiceError;
 use crate::app::middleware::session_user::SessionUser;
 use crate::app::models::{Session, SlimUser, User};
@@ -12,7 +12,7 @@ use crate::app::security::verify_password;
 
 /// struct for storing login request data
 #[derive(Debug, Deserialize)]
-pub struct AuthData {
+pub struct AuthRequestData {
     pub name: String,
     pub password: String,
 }
@@ -39,11 +39,11 @@ pub async fn logout(
 
 /// POST /auth
 pub async fn login(
-    auth_data: web::Json<AuthData>,
+    auth_data: web::Json<AuthRequestData>,
     id: Identity,
     pool: web::Data<DbPool>,
 ) -> Result<HttpResponse, ServiceError> {
-    let auth_data_inner: AuthData = auth_data.into_inner();
+    let auth_data_inner: AuthRequestData = auth_data.into_inner();
 
     let res = web::block(move || {
         let conn: &PgConnection = &pool.get().unwrap();
@@ -79,7 +79,7 @@ pub async fn get_me(session_user: SessionUser) -> HttpResponse {
 
 
 /// Queries User object by given user name and verifies if given password matches stored hash
-fn query_login(auth_data: AuthData, conn: &PgConnection) -> Result<SlimUser, ServiceError> {
+fn query_login(auth_data: AuthRequestData, conn: &PgConnection) -> Result<SlimUser, ServiceError> {
     use crate::schema::users::dsl::{name, users};
     let mut items = users
         .filter(name.eq(&auth_data.name))

@@ -1,11 +1,5 @@
-use diesel::prelude::*;
-use diesel::r2d2::{self, ConnectionManager};
-
 /// length of secure session access tokens
 pub const TOKEN_LENGTH: usize = 32;
-
-/// Common type for database pool
-pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 lazy_static::lazy_static! {
     /// loads SECRET_KEY environment variable for use in password hash validation
