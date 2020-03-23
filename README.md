@@ -33,12 +33,6 @@ CREATE USER paperside_api_test WITH ENCRYPTED PASSWORD 'paperside_api_test';
 GRANT ALL ON DATABASE paperside_api_test TO paperside_api_test;
 ```
 
-- Initialize / migrate diesel models (must specify the testing database url)
-
-```
-diesel migration run --database-url postgres://paperside_api_test:paperside_api_test@localhost/paperside_api_test
-```
-
 ##### Run Tests
 
 ```

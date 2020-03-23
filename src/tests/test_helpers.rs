@@ -11,6 +11,7 @@ pub mod tests {
     
     use crate::app::database::{get_database_pool, DbPool};
     use crate::app::identity::get_identity_service;
+    use crate::app::security::hash_password;
     use crate::app::routes::build_routes;
 
     /// Testing setup function to reset testing database before any tests are run
@@ -28,7 +29,7 @@ pub mod tests {
             let conn: &PgConnection = &pool.get().unwrap();
             
             // drop all tables from database
-            writeln!(&mut stdout(), "Dropping all tables...").expect("Failed to print to stdout");
+            writeln!(&mut stdout(), "\nResetting database, dropping all tables...").expect("Failed to print to stdout");
             #[derive(QueryableByName)]
             struct PgTablesEntry(
                 #[column_name = "tablename"]
@@ -45,7 +46,14 @@ pub mod tests {
 
             // run migrations
             run_pending_migrations(conn).expect("Error during database migration");
-            
+            // print separating newline
+            writeln!(&mut stdout(), "").expect("Failed to print to stdout");
+
+            // insert test fixtures
+            let hashed_test_password = hash_password("test_user").expect("hash_password error");
+            diesel::sql_query(format!("INSERT INTO users (name,passhash,created_at) VALUES ('test_user','{}',now())", hashed_test_password))
+                .execute(conn).expect("Error when inserting test user account");
+
             TestDbSetup { pool }
         }       
     }

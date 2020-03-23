@@ -2,7 +2,7 @@ use actix_identity::Identity;
 use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::prelude::*;
 use diesel::PgConnection;
-use serde::Deserialize;
+use serde::{Deserialize,Serialize};
 
 use crate::app::database::DbPool;
 use crate::app::errors::ServiceError;
@@ -11,7 +11,7 @@ use crate::app::models::{Session, SlimUser, User};
 use crate::app::security::verify_password;
 
 /// struct for storing login request data
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AuthRequestData {
     pub name: String,
     pub password: String,
@@ -101,6 +101,5 @@ fn query_create_session(session: Session, conn: &PgConnection) -> Result<Session
     
     let inserted_session: Session =
         diesel::insert_into(sessions).values(&session).get_result(conn)?;
-    dbg!(&inserted_session);
     return Ok(inserted_session.into());
 }
