@@ -35,6 +35,8 @@ GRANT ALL ON DATABASE paperside_api_test TO paperside_api_test;
 
 ##### Run Tests
 
+- The test database will be reset and migrated by the test runner
+
 ```
 cargo test
 ```

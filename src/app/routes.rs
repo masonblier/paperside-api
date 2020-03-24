@@ -7,6 +7,10 @@ pub fn build_routes(cfg: &mut web::ServiceConfig) {
     cfg
         // routes
         .service(
+            web::resource("/reference_item")
+                .route(web::post().to(reference_items_controller::create_reference_item)),
+        )
+        .service(
             web::resource("/register")
                 .route(web::post().to(registrations_controller::register_user)),
         )

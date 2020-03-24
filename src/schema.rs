@@ -14,6 +14,15 @@ table! {
 }
 
 table! {
+    reference_item_submissions (id) {
+        id -> Int4,
+        reference_item_id -> Int4,
+        submitting_user_id -> Int4,
+        is_public -> Bool,
+    }
+}
+
+table! {
     reference_items (id) {
         id -> Int4,
         title -> Text,
@@ -43,6 +52,7 @@ table! {
 allow_tables_to_appear_in_same_query!(
     authors,
     reference_authors,
+    reference_item_submissions,
     reference_items,
     sessions,
     users,

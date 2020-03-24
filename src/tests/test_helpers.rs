@@ -1,18 +1,22 @@
 #[cfg(test)]
 pub mod tests {
     use std::io::{stdout, Write};
-    use actix_http::{Request};
+    use actix_http::{Request,cookie::Cookie};
     use actix_service::Service;
     use actix_web::dev::ServiceResponse;
-    use actix_web::{test, web, App, body::Body, Error};
+    use actix_web::{http, test, web, App, body::Body, Error};
     use diesel::prelude::*;
     use diesel::sql_types::Text;
     use diesel_migrations::run_pending_migrations;
     
+    use crate::app::controllers::auth_controller::AuthRequestData;
     use crate::app::database::{get_database_pool, DbPool};
     use crate::app::identity::get_identity_service;
     use crate::app::security::hash_password;
     use crate::app::routes::build_routes;
+
+    // alias for test app type
+    pub trait TestApp = Service<Request = Request, Response = ServiceResponse<Body>, Error = Error>;
 
     /// Testing setup function to reset testing database before any tests are run
     struct TestDbSetup {
@@ -63,7 +67,7 @@ pub mod tests {
     
 
     /// Creates App service with test configuration
-    pub async fn create_test_app() -> impl Service<Request = Request, Response = ServiceResponse<Body>, Error = Error> {
+    pub async fn create_test_app() -> impl TestApp {
         test::init_service(
             App::new()
                 // set up DB pool to be used with web::Data<Pool> extractor
@@ -75,5 +79,29 @@ pub mod tests {
                 .configure(build_routes)
         )
         .await
+    }
+
+    /// Logs-in with test account, returns associated cookie
+    pub async fn login_test_user<A>(mut app: &mut A) -> Cookie<'_> 
+        where A: TestApp
+    {
+        // create auth request for test user
+        let auth_data = AuthRequestData {
+            name: "test_user".to_string(),
+            password: "test_user".to_string()
+        };
+
+        // make login request
+        let req = test::TestRequest::post()
+            .set_json(&auth_data)
+            .uri("/auth")
+            .to_request();
+        let resp = test::call_service(&mut app, req).await;
+
+        // expect success
+        assert_eq!(resp.status(), http::StatusCode::OK);
+
+        // return cookie set by login request
+        resp.response().cookies().next().unwrap().into_owned()
     }
 }
