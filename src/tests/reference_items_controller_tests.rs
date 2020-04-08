@@ -57,7 +57,7 @@ mod tests {
         let conn: &PgConnection = &pool.get().unwrap();
 
         // login test user
-        let cookie = login_test_user(m_app).await;
+        let cookie = login_test_user(m_app).await.into_owned();
 
         // drop all existing data and create data for test
         diesel::sql_query(format!("DELETE FROM reference_items"))
@@ -78,8 +78,7 @@ mod tests {
 
         // make GET list request
         let req = TestRequest::get()
-            // .cookie(cookie.clone()) 
-                // TODO cant reuse cookie due to borrow checker?
+            .cookie(cookie.clone()) 
             .uri("/reference_items")
             .to_request();
         let resp = call_service(m_app, req).await;
